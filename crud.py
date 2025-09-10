@@ -26,6 +26,9 @@ def get_authors(db: Session, skip: int = 0, limit: int = 10):
 
 
 def create_book(db: Session, book: schemas.BookCreate, author_id: int):
+    db_author = get_author(db=db, author_id=author_id)
+    if db_author is None:
+        raise HTTPException(status_code=404, detail="Author not found")
     db_book = models.Book(
         title=book.title,
         summary=book.summary,

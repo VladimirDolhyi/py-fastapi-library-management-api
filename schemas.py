@@ -6,11 +6,11 @@ from typing import List, Optional
 class BookBase(BaseModel):
     title: str
     summary: str
-    publication_date: date
+    publication_date: Optional[date] = None
 
 
 class BookCreate(BookBase):
-    author_id: Optional[int] = None
+    pass
 
 
 class Book(BookBase):
