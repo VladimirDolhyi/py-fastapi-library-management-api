@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import models
 import schemas
@@ -5,10 +7,14 @@ import schemas
 
 def create_author(db: Session, author: schemas.AuthorCreate):
     db_author = models.Author(name=author.name, bio=author.bio)
-    db.add(db_author)
-    db.commit()
-    db.refresh(db_author)
-    return db_author
+    try:
+        db.add(db_author)
+        db.commit()
+        db.refresh(db_author)
+        return db_author
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Author already exists")
 
 
 def get_author(db: Session, author_id: int):
@@ -26,10 +32,14 @@ def create_book(db: Session, book: schemas.BookCreate, author_id: int):
         publication_date=book.publication_date,
         author_id=author_id,
     )
-    db.add(db_book)
-    db.commit()
-    db.refresh(db_book)
-    return db_book
+    try:
+        db.add(db_book)
+        db.commit()
+        db.refresh(db_book)
+        return db_book
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Book already exists")
 
 
 def get_books(db: Session, skip: int = 0, limit: int = 10):

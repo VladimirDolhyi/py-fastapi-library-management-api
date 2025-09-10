@@ -1,13 +1,18 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 import crud
 import schemas
-from database import SessionLocal
+from database import SessionLocal, Base, engine
 
 app = FastAPI(title="Library Management API")
+
+
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
 
 
 def get_db() -> Session:
@@ -19,7 +24,11 @@ def get_db() -> Session:
 
 
 @app.get("/authors/", response_model=List[schemas.Author])
-def read_authors(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_authors(
+        skip: int = Query(0, ge=0),
+        limit: int = Query(10, ge=0),
+        db: Session = Depends(get_db)
+):
     return crud.get_authors(db=db, skip=skip, limit=limit)
 
 
@@ -37,7 +46,14 @@ def read_author(author_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/books/", response_model=List[schemas.Book])
-def read_books(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_books(
+        author_id: Optional[int] = None,
+        skip: int = Query(0, ge=0),
+        limit: int = Query(10, ge=0),
+        db: Session = Depends(get_db)
+):
+    if author_id:
+        crud.get_books_by_author(db=db, author_id=author_id, skip=skip, limit=limit)
     return crud.get_books(db=db, skip=skip, limit=limit)
 
 
@@ -52,4 +68,7 @@ def read_books_by_author(
 def create_book_for_author(
     author_id: int, book: schemas.BookCreate, db: Session = Depends(get_db)
 ):
+    db_author = crud.get_author(db=db, author_id=author_id)
+    if not db_author:
+        raise HTTPException(status_code=404, detail="Author not found")
     return crud.create_book(db=db, book=book, author_id=author_id)
